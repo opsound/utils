@@ -37,6 +37,8 @@ char **split(const char *s, const char *delim, size_t *nstrings) {
 	strings = curstring = calloc(n, sizeof(*strings));
 
 	while ((token = strsep(&input, delim)) != NULL) {
+		if (!*token) continue; // skip appending empty strings
+
 		*curstring++ = strdup(token);
 		n_empty--;
 		if (!n_empty) {
@@ -50,6 +52,7 @@ char **split(const char *s, const char *delim, size_t *nstrings) {
 		}
 	}
 	*curstring = NULL;
+	n_empty--;
 	n -= n_empty;
 
 	free(tofree);
@@ -63,11 +66,7 @@ int main(int argc, char *argv[])
 	size_t n_strings;
 	char **strings = split(lorem, "\n", &n_strings);
 	printf("%zu\n", n_strings);
-	char *line;
-	while ((line = *strings++)) {
-		if (*line)
-			printf("%s\n", strip(line));
-	}
-
+	for (size_t i = 0; strings[i]; i++)
+		printf("%p\n", strings[i]);
 	return 0;
 }
