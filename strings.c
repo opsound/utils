@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -168,6 +169,28 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 	return output;
 }
 
+bool contains(const char *string, const char *pat)
+{
+	if (strstr(string, pat) != NULL) return true;
+	return false;
+}
+
+bool contains_reg(const char *string, const char *pat)
+{
+	bool ret = false;
+	regex_t reg;
+	regmatch_t match;
+
+	if (regcomp(&reg, pat, 0) != 0) return false;
+
+	if (regexec(&reg, string, 1, &match, 0) == 0)
+		ret = true;
+
+	regfree(&reg);
+
+	return ret;
+}
+
 char *read_all(FILE *fp, size_t *n)
 {
 	size_t len = 0;
@@ -201,11 +224,17 @@ int main(int argc, char *argv[])
 
 	FILE *fp = fopen("lorem.txt", "r");
 	size_t len;
-	const char *lorem = read_all(fp, &len);
+	char *lorem = read_all(fp, &len);
 
 	char **strings = split(lorem, "\n", &n_strings);
 	for (size_t i = 0; strings[i]; i++) {
-		printf("%s\n\n", strings[i]);
+		printf("%s\n", strings[i]);
+
+		if (contains_reg(strings[i], "[a-z]\\{3\\}")) {
+			char *replaced = replace_reg(strings[i], "[a-z]\\{3\\}", "XXX");
+			printf("%s\n\n", replaced);
+			free(replaced);
+		}
 	}
 
 	freestrings(strings);
@@ -214,9 +243,11 @@ int main(int argc, char *argv[])
 	printf("%s\n", r1);
 	free(r1);
 
-	char *r2 = replace_reg(lorem, "[abc]\\{3\\}", "XXX");
+	char *r2 = replace_reg(lorem, "[a-z]\\{3\\}", "XXX");
 	printf("%s\n", r2);
 	free(r2);
+
+	free(lorem);
 
 	return 0;
 }
