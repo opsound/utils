@@ -1,10 +1,10 @@
+#include <ctype.h>
+#include <regex.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <stddef.h>
-#include <regex.h>
 
 // Removes whitespace in-place from s
 char *strip(char *s)
@@ -27,7 +27,7 @@ void freestrings(char **s)
 	free(s);
 }
 
-// Returns pos null-terminated array of strings from s delimited by any of the
+// Returns a null-terminated array of strings from s delimited by any of the
 // characters in delim
 char **split(const char *s, const char *delim, size_t *nstrings)
 {
