@@ -5,16 +5,6 @@
 #include <stddef.h>
 #include <regex.h>
 
-#define STR \
-	"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor\n" \
-	"incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis\n" \
-	"nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\n" \
-	"consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\n" \
-	"dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\n" \
-	"sunt in culpa qui officia deserunt mollit anim id est laborum.\n"
-
-char *lorem = STR;
-
 // Removes whitespace in-place from s
 char *strip(char *s)
 {
@@ -141,12 +131,81 @@ char *replace(const char *string, const char *pat, const char *rep)
 	return output;
 }
 
+char *replace_reg(const char *string, const char *pat, const char *rep)
+{
+	regmatch_t match;
+	regex_t reg;
+
+	const char *search = string;
+	size_t output_len = 0;
+
+	if (regcomp(&reg, pat, 0) != 0) return NULL;
+
+	while (regexec(&reg, search, 1, &match, 0) == 0) {
+		output_len += match.rm_so;
+		output_len += strlen(rep);
+
+		search = &search[match.rm_eo];
+	}
+	output_len += strlen(search);
+
+	char *output = calloc(output_len + 1, 1);
+	char *pos = output;
+	search = string;
+
+	while (regexec(&reg, search, 1, &match, 0) == 0) {
+		memcpy(pos, search, match.rm_so);
+		pos += match.rm_so;
+		memcpy(pos, rep, strlen(rep));
+		pos += strlen(rep);
+
+		search = &search[match.rm_eo];
+	}
+	strcpy(pos, search);
+
+	regfree(&reg);
+
+	return output;
+}
+
+char *read_all(FILE *fp, size_t *n)
+{
+	size_t len = 0;
+	size_t alloc_len = 32;
+	size_t vacant_len = alloc_len;
+
+	char *buf = calloc(alloc_len, 1);
+	if (!buf) return NULL;
+
+	size_t n_read = 0;
+	while ((n_read = fread(&buf[len], 1, vacant_len, fp))) {
+		vacant_len -= n_read;
+		len += n_read;
+
+		if (vacant_len == 0) {
+			vacant_len = alloc_len;
+			alloc_len *= 2;
+
+			buf = realloc(buf, alloc_len);
+			if (!buf) return NULL;
+		}
+	}
+
+	*n = len;
+	return buf;
+}
+
 int main(int argc, char *argv[])
 {
 	size_t n_strings;
+
+	FILE *fp = fopen("lorem.txt", "r");
+	size_t len;
+	const char *lorem = read_all(fp, &len);
+
 	char **strings = split(lorem, "\n", &n_strings);
 	for (size_t i = 0; strings[i]; i++) {
-		/* printf("%s\n", strings[i]); */
+		printf("%s\n\n", strings[i]);
 	}
 
 	freestrings(strings);
@@ -154,6 +213,10 @@ int main(int argc, char *argv[])
 	char *r1 = replace(lorem, " ", "");
 	printf("%s\n", r1);
 	free(r1);
+
+	char *r2 = replace_reg(lorem, "[abc]\\{3\\}", "XXX");
+	printf("%s\n", r2);
+	free(r2);
 
 	return 0;
 }
