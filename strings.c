@@ -169,12 +169,6 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 	return output;
 }
 
-bool contains(const char *string, const char *pat)
-{
-	if (strstr(string, pat) != NULL) return true;
-	return false;
-}
-
 bool contains_reg(const char *string, const char *pat)
 {
 	bool ret = false;
