@@ -140,7 +140,7 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 	const char *search = string;
 	size_t output_len = 0;
 
-	if (regcomp(&reg, pat, 0) != 0) return NULL;
+	if (regcomp(&reg, pat, REG_EXTENDED) != 0) return NULL;
 
 	while (regexec(&reg, search, 1, &match, 0) == 0) {
 		output_len += match.rm_so;
@@ -175,7 +175,7 @@ bool contains_reg(const char *string, const char *pat)
 	regex_t reg;
 	regmatch_t match;
 
-	if (regcomp(&reg, pat, 0) != 0) return false;
+	if (regcomp(&reg, pat, REG_EXTENDED) != 0) return false;
 
 	if (regexec(&reg, string, 1, &match, 0) == 0)
 		ret = true;
@@ -224,8 +224,8 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; strings[i]; i++) {
 		printf("%s\n", strings[i]);
 
-		if (contains_reg(strings[i], "[a-z]\\{3\\}")) {
-			char *replaced = replace_reg(strings[i], "[a-z]\\{3\\}", "XXX");
+		if (contains_reg(strings[i], "[a-z]{3}")) {
+			char *replaced = replace_reg(strings[i], "[a-z]*", "XXX");
 			printf("%s\n\n", replaced);
 			free(replaced);
 		}
