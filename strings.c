@@ -8,19 +8,6 @@
 
 #define LEN(x) (sizeof(x) / sizeof((x)[0]))
 
-// Removes whitespace in-place from s
-char *strip(char *s)
-{
-	char *a, *b;
-	a = b = s;
-	while (*b != '\0') {
-		if (isspace(*b)) b++;
-		else *a++ = *b++;
-	}
-	*a = '\0';
-	return s;
-}
-
 void freestrings(char **s)
 {
 	for (size_t i = 0; s[i]; i++) {
