@@ -224,6 +224,9 @@ char *read_all(FILE *fp, size_t *n)
 		}
 	}
 
+	buf = realloc(buf, len);
+	if (!buf) return NULL;
+
 	*n = len;
 	return buf;
 }
