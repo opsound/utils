@@ -1,10 +1,12 @@
 #include <ctype.h>
-#include <regex.h>
+#include <pcre.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define LEN(x) (sizeof(x) / sizeof((x)[0]))
 
 // Removes whitespace in-place from s
 char *strip(char *s)
@@ -134,37 +136,44 @@ char *replace(const char *string, const char *pat, const char *rep)
 
 char *replace_reg(const char *string, const char *pat, const char *rep)
 {
-	regmatch_t match;
-	regex_t reg;
+	const char *error;
+	int erroffset;
 
-	const char *search = string;
+	pcre *re = pcre_compile(pat, 0, &error, &erroffset, NULL);
+	if (!re) {
+		fprintf(stderr, "%s\n", error);
+		return NULL;
+	}
+
+	int startoffset = 0;
+	int ovector[6];
 	size_t output_len = 0;
 
-	if (regcomp(&reg, pat, REG_EXTENDED) != 0) return NULL;
-
-	while (regexec(&reg, search, 1, &match, 0) == 0) {
-		output_len += match.rm_so;
+	while (pcre_exec(re, NULL, string, strlen(string),
+			startoffset, 0, ovector, LEN(ovector)) > 0) {
+		output_len += ovector[0];
 		output_len += strlen(rep);
 
-		search = &search[match.rm_eo];
+		startoffset = ovector[1];
 	}
-	output_len += strlen(search);
+	output_len += strlen(&string[startoffset]);
 
 	char *output = calloc(output_len + 1, 1);
 	char *pos = output;
-	search = string;
+	startoffset = 0;
 
-	while (regexec(&reg, search, 1, &match, 0) == 0) {
-		memcpy(pos, search, match.rm_so);
-		pos += match.rm_so;
+	while (pcre_exec(re, NULL, string, strlen(string),
+			startoffset, 0, ovector, LEN(ovector)) > 0) {
+		memcpy(pos, &string[startoffset], ovector[0]);
+		pos += ovector[0] - startoffset;
 		memcpy(pos, rep, strlen(rep));
 		pos += strlen(rep);
 
-		search = &search[match.rm_eo];
+		startoffset = ovector[1];
 	}
-	strcpy(pos, search);
+	strcpy(pos, &string[startoffset]);
 
-	regfree(&reg);
+	pcre_free(re);
 
 	return output;
 }
@@ -172,15 +181,22 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 bool contains_reg(const char *string, const char *pat)
 {
 	bool ret = false;
-	regex_t reg;
-	regmatch_t match;
+	const char *error;
+	int erroffset;
 
-	if (regcomp(&reg, pat, REG_EXTENDED) != 0) return false;
+	pcre *re = pcre_compile(pat, 0, &error, &erroffset, NULL);
+	if (!re) {
+		fprintf(stderr, "%s\n", error);
+		return false;
+	}
 
-	if (regexec(&reg, string, 1, &match, 0) == 0)
+	int ovector[6];
+
+	if (pcre_exec(re, NULL, string, strlen(string),
+			0, 0, ovector, LEN(ovector)) > 0)
 		ret = true;
 
-	regfree(&reg);
+	pcre_free(re);
 
 	return ret;
 }
@@ -214,22 +230,22 @@ char *read_all(FILE *fp, size_t *n)
 
 int main(int argc, char *argv[])
 {
-	size_t n_strings;
-
 	FILE *fp = fopen("lorem.txt", "r");
 	size_t len;
 	char *lorem = read_all(fp, &len);
+	fclose(fp);
 
+	size_t n_strings;
 	char **strings = split(lorem, "\n", &n_strings);
-	for (size_t i = 0; strings[i]; i++) {
-		printf("%s\n", strings[i]);
 
+	for (size_t i = 0; strings[i]; i++) {
 		if (contains_reg(strings[i], "[a-z]{3}")) {
-			char *replaced = replace_reg(strings[i], "[a-z]*", "XXX");
-			printf("%s\n\n", replaced);
+			char *replaced = replace_reg(strings[i], "[a-z]+", "X");
+			printf("%s\n", replaced);
 			free(replaced);
 		}
 	}
+	printf("\n");
 
 	freestrings(strings);
 
@@ -237,7 +253,7 @@ int main(int argc, char *argv[])
 	printf("%s\n", r1);
 	free(r1);
 
-	char *r2 = replace_reg(lorem, "[a-z]\\{3\\}", "XXX");
+	char *r2 = replace_reg(lorem, "[a-z]{3}", "XXX");
 	printf("%s\n", r2);
 	free(r2);
 
