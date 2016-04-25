@@ -17,7 +17,7 @@ void freestrings(char **s)
 }
 
 // Returns a null-terminated array of strings from s delimited by any of the
-// characters in delim
+// characters in delim.  The returned value can be freed with freestrings()
 char **split(const char *s, const char *delim, size_t *nstrings)
 {
 	char *token, *input, *tofree;
@@ -133,11 +133,16 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 	}
 
 	int startoffset = 0;
-	int ovector[6];
+	int ovector[3];
 	size_t output_len = 0;
 
 	while (pcre_exec(re, NULL, string, strlen(string),
 			startoffset, 0, ovector, LEN(ovector)) > 0) {
+		if (ovector[1] == 0) {
+			fprintf(stderr, "Error: cannot replace 0-length match\n");
+			return NULL;
+		}
+
 		output_len += ovector[0];
 		output_len += strlen(rep);
 
@@ -177,7 +182,7 @@ bool contains_reg(const char *string, const char *pat)
 		return false;
 	}
 
-	int ovector[6];
+	int ovector[3];
 
 	if (pcre_exec(re, NULL, string, strlen(string),
 			0, 0, ovector, LEN(ovector)) > 0)
@@ -229,8 +234,10 @@ int main(int argc, char *argv[])
 	char **strings = split(lorem, "\n", &n_strings);
 
 	for (size_t i = 0; strings[i]; i++) {
-		if (contains_reg(strings[i], "[a-z]{3}")) {
-			char *replaced = replace_reg(strings[i], "[a-z]+", "X");
+		const char *pat = "[a-z]+";
+
+		if (contains_reg(strings[i], pat)) {
+			char *replaced = replace_reg(strings[i], pat, "X");
 			printf("%s\n", replaced);
 			free(replaced);
 		}
@@ -243,7 +250,7 @@ int main(int argc, char *argv[])
 	printf("%s\n", r1);
 	free(r1);
 
-	char *r2 = replace_reg(lorem, "[a-z]{3}", "XXX");
+	char *r2 = replace_reg(lorem, "\\s", "XXX");
 	printf("%s\n", r2);
 	free(r2);
 
