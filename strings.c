@@ -138,7 +138,7 @@ char *replace_reg(const char *string, const char *pat, const char *rep)
 
 	while (pcre_exec(re, NULL, string, strlen(string),
 			startoffset, 0, ovector, LEN(ovector)) > 0) {
-		if (ovector[1] == 0) {
+		if (ovector[0] == ovector[1]) {
 			fprintf(stderr, "Error: cannot replace 0-length match\n");
 			return NULL;
 		}
